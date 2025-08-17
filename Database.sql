@@ -1,0 +1,72 @@
+CREATE DATABASE university_association;
+USE university_association;
+
+CREATE TABLE users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_number VARCHAR(20) NOT NULL UNIQUE,
+  name VARCHAR(150) NOT NULL,
+  email VARCHAR(150) UNIQUE,
+  password VARCHAR(255) NOT NULL,
+  role ENUM('STUDENT','MEMBER','ADMIN') NOT NULL DEFAULT 'STUDENT',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+);
+
+CREATE TABLE article (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(300) NOT NULL,
+  content LONGTEXT NOT NULL,
+  status ENUM('DRAFT','PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE article_authors (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  article_id INT NOT NULL,
+  users_id INT NOT NULL,
+  UNIQUE (article_id, users_id),
+  FOREIGN KEY (article_id) REFERENCES article(id) ON DELETE CASCADE,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE announcement (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  author_id INT NOT NULL,
+  title VARCHAR(300) NOT NULL,
+  content TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE event (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  capacity INT NOT NULL DEFAULT 0,
+  registered_count INT NOT NULL DEFAULT 0,
+  start_at DATETIME,
+  end_at DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+);
+
+CREATE TABLE event_registration (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  users_id INT NOT NULL,
+  registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (event_id, users_id),
+  FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE,
+  FOREIGN KEY (users_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Polymorphic
+CREATE TABLE comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  author_id INT,
+  target_type ENUM('ARTICLE','ANNOUNCEMENT','EVENT') NOT NULL,
+  target_id INT NOT NULL,
+  content TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME,
+  FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+);
