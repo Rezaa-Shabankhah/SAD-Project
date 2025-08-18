@@ -6,12 +6,12 @@
 
 ### مراحل اجرا :
 
-دستورات زیر را از ترمینال و دایرکتری اصلی فایل‌ها اجرا شود :
+دستورات زیر از دایرکتری اصلی فایل‌ها اجرا شود :
 ```
+pip install Django pymysql djangorestframework drf-yasg pymysql
+
 python3 -m venv venv
 source venv/bin/activate
-
-pip install django pymysql
 
 mysql -u root -p < university_association.sql
 python cli.py
