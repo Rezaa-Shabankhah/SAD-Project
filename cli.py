@@ -1,4 +1,3 @@
-import os
 import pymysql
 
 
@@ -13,7 +12,7 @@ def get_conn():
 
 
 def clear():
-    os.system("clear")
+    print("\033[2J\033[H", end="")
 
 
 def login():
