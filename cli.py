@@ -46,7 +46,6 @@ def login():
 
 
 def show_comments(cur, target_type, target_id):
-    """Display comments for a specific content"""
     print("\n" + "=" * 50)
     print("COMMENTS")
     print("=" * 50)
@@ -73,7 +72,6 @@ def show_comments(cur, target_type, target_id):
 
 
 def add_comment(cur, conn, target_type, target_id, user_id):
-    """Add a new comment"""
     content = input("Enter your comment: ").strip()
     if content:
         cur.execute("INSERT INTO comments (author_id, target_type, target_id, content) VALUES (%s,%s,%s,%s)", (user_id, target_type, target_id, content))
@@ -82,7 +80,6 @@ def add_comment(cur, conn, target_type, target_id, user_id):
 
 
 def delete_comment(cur, conn):
-    """Admin function to delete a comment"""
     comment_id = input("Enter comment ID to delete: ")
     if comment_id.isdigit():
         cur.execute("DELETE FROM comments WHERE id=%s", (comment_id,))
@@ -94,8 +91,6 @@ def delete_comment(cur, conn):
 
 
 def view_content_with_comments(cur, conn, content_type, content_id, user):
-    """Generic function to view content with comments and handle interactions"""
-    # Get content based on type
     if content_type == "ANNOUNCEMENT":
         cur.execute("SELECT * FROM announcement WHERE id=%s", (content_id,))
         content = cur.fetchone()
@@ -124,10 +119,8 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         print(content["description"])
         print(f"Capacity: {content['capacity']}, Registered: {content['registered_count']}")
 
-    # Show comments
     show_comments(cur, content_type, content_id)
 
-    # Show options based on user role and content type
     print("\nOptions:")
     if content_type == "ANNOUNCEMENT" and user["role"] in ("MEMBER", "ADMIN"):
         print("E. Edit | D. Delete | A. Add Comment")
@@ -146,7 +139,6 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
 
     action = input("> ").upper()
 
-    # Handle comment actions first
     if action == "A":
         add_comment(cur, conn, content_type, content_id, user["id"])
         input("\nPress Enter...")
@@ -156,7 +148,6 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         input("\nPress Enter...")
         return view_content_with_comments(cur, conn, content_type, content_id, user)
 
-    # Handle content-specific actions
     if content_type == "ANNOUNCEMENT" and user["role"] in ("MEMBER", "ADMIN"):
         if action == "E":
             new_title = input("New title: ")
@@ -199,7 +190,6 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
 
 
 def comment_management(user):
-    """Admin panel for managing all comments"""
     conn = get_conn()
     with conn.cursor() as cur:
         while True:
