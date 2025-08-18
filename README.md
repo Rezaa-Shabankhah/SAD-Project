@@ -4,6 +4,24 @@
 
 
 
+## مراحل اجرا :
+
+دستورات زیر را از ترمینال و دایرکتری اصلی فایل‌ها اجرا شود :
+
+python3 -m venv venv
+source venv/bin/activate
+
+pip install django pymysql
+
+mysql -u root -p < university_association.sql
+python cli.py
+
+
+توجه : پسورد دیتابیس در داخل کد 12345 ست شده
+
+
+
+
 ## ساختار کلی پروژه
 
 پروژه در دو بخش اصلی تقسیم شده است:
@@ -93,17 +111,3 @@
 سیستم شامل مکانیزم‌های پایه‌ای برای مدیریت خطا است، از جمله بررسی وجود رکوردها قبل از انجام عملیات و catch کردن exception هایی مانند duplicate key errors.
 
 
-
-
-## مراحل اجرا :
-
-دستورات زیر را از ترمینال و دایرکتری اصلی فایل‌ها اجرا شود :
-
-python3 -m venv venv
-source venv/bin/activate
-
-pip install django pymysql
-
-mysql -u root -p < university_association.sql
-python cli.py
-توجه : پسورد دیتابیس در داخل کد 12345 ست شده
