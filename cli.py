@@ -1,4 +1,7 @@
 import pymysql
+from colorama import init, Fore, Style
+
+init(autoreset=True)
 
 
 def get_conn():
@@ -18,11 +21,13 @@ def clear():
 def login():
     conn = get_conn()
     with conn.cursor() as cur:
+        print(Fore.BLUE + "Welcome!")
         sid = input("Enter your Student ID: ")
         cur.execute("SELECT * FROM students WHERE student_number=%s", (sid,))
         student = cur.fetchone()
         if not student:
-            print("Invalid Student ID.")
+            print(Fore.RED + "Invalid Student ID.")
+            input("\nPress Enter...")
             return None
 
         cur.execute("SELECT * FROM users WHERE student_id=%s", (student["id"],))
@@ -33,22 +38,22 @@ def login():
             if email == user["email"] and pwd == user["password"]:
                 return {**student, **user}
             else:
-                print("Wrong credentials.")
+                print(Fore.RED + "Wrong credentials.")
+                input("\nPress Enter...")
                 return None
         else:
-            print("No account. Create one:")
+            print("No accounts found. Create one:")
             email = input("New Email: ")
             pwd = input("New Password: ")
             cur.execute("INSERT INTO users (student_id,email,password) VALUES (%s,%s,%s)", (student["id"], email, pwd))
             conn.commit()
-            print("Account created. Please login again.")
+            print(Fore.GREEN + "Account created. Please login again.")
+            input("\nPress Enter...")
             return None
 
 
 def show_comments(cur, target_type, target_id):
-    print("\n" + "=" * 50)
-    print("COMMENTS")
-    print("=" * 50)
+    print(Fore.CYAN + "\n=== COMMENTS ===")
 
     cur.execute(
         """
@@ -76,7 +81,7 @@ def add_comment(cur, conn, target_type, target_id, user_id):
     if content:
         cur.execute("INSERT INTO comments (author_id, target_type, target_id, content) VALUES (%s,%s,%s,%s)", (user_id, target_type, target_id, content))
         conn.commit()
-        print("Comment added!")
+        print(Fore.GREEN + "Comment added!")
 
 
 def delete_comment(cur, conn):
@@ -85,9 +90,9 @@ def delete_comment(cur, conn):
         cur.execute("DELETE FROM comments WHERE id=%s", (comment_id,))
         if cur.rowcount > 0:
             conn.commit()
-            print("Comment deleted!")
+            print(Fore.GREEN + "Comment deleted!")
         else:
-            print("Comment not found.")
+            print(Fore.RED + "Comment not found.")
 
 
 def view_content_with_comments(cur, conn, content_type, content_id, user):
@@ -97,7 +102,7 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         if not content:
             return
         clear()
-        print(f"--- {content['title']} ---")
+        print(Fore.YELLOW + f"--- {content['title']} ---")
         print(content["content"])
 
     elif content_type == "ARTICLE":
@@ -106,7 +111,7 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         if not content:
             return
         clear()
-        print(f"--- {content['title']} ---")
+        print(Fore.YELLOW + f"--- {content['title']} ---")
         print(content["content"])
 
     elif content_type == "EVENT":
@@ -115,27 +120,25 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         if not content:
             return
         clear()
-        print(f"--- {content['title']} ---")
+        print(Fore.YELLOW + f"--- {content['title']} ---")
         print(content["description"])
         print(f"Capacity: {content['capacity']}, Registered: {content['registered_count']}")
 
     show_comments(cur, content_type, content_id)
 
     print("\nOptions:")
-    if content_type == "ANNOUNCEMENT" and user["role"] in ("MEMBER", "ADMIN"):
+    if content_type == "ANNOUNCEMENT" and user["role"] == "MEMBER":
         print("E. Edit | D. Delete | A. Add Comment")
+    elif content_type == "ANNOUNCEMENT" and user["role"] == "ADMIN":
+        print("E. Edit | D. Delete | A. Add Comment | DC. Delete Comment")
     elif content_type == "ARTICLE" and user["role"] == "ADMIN":
-        print("E. Edit | D. Delete | A. Add Comment")
-    elif content_type == "EVENT":
-        if user["role"] == "ADMIN":
-            print("E. Edit | D. Delete | A. Add Comment")
-        else:
-            print("J. Join event | A. Add Comment")
+        print("E. Edit | D. Delete | A. Add Comment | DC. Delete Comment")
+    elif content_type == "EVENT" and user["role"] == "ADMIN":
+        print("E. Edit | D. Delete | A. Add Comment | DC. Delete Comment")
+    elif content_type == "EVENT" and user["role"] == "student":
+        print("A. Add Comment | J. Join event")
     else:
         print("A. Add Comment")
-
-    if user["role"] == "ADMIN":
-        print("DC. Delete Comment")
 
     action = input("> ").upper()
 
@@ -176,7 +179,7 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
                 conn.commit()
                 print("Joined!")
             except:
-                print("Already joined or event full.")
+                print(Fore.RED + "Already joined or event full.")
             input("Press Enter...")
         elif action == "E" and user["role"] == "ADMIN":
             new_title = input("New title: ")
@@ -194,7 +197,7 @@ def comment_management(user):
     with conn.cursor() as cur:
         while True:
             clear()
-            print("=== Comment Management ===")
+            print(Fore.BLUE + "=== Comment Management ===")
 
             cur.execute("""
                 SELECT c.id, s.name, c.target_type, c.target_id, c.content,
@@ -214,7 +217,7 @@ def comment_management(user):
 
             comments = cur.fetchall()
             if not comments:
-                print("No comments found.")
+                print(Fore.RED + "No comments found.")
             else:
                 for comment in comments:
                     print(
@@ -234,14 +237,13 @@ def comment_management(user):
 def menu(user):
     while True:
         clear()
-        print("=== Main Menu ===")
+        print(Fore.BLUE + "=== Main Menu ===")
         print("1. Announcements")
         print("2. Articles")
         print("3. Events")
         if user["role"] == "ADMIN":
             print("4. Admin Panel")
-            print("5. Comment Management")
-        print("0. Logout")
+        print(Fore.RED + "0. Logout")
 
         choice = input("> ")
         if choice == "1":
@@ -252,8 +254,6 @@ def menu(user):
             events(user)
         elif choice == "4" and user["role"] == "ADMIN":
             admin_panel(user)
-        elif choice == "5" and user["role"] == "ADMIN":
-            comment_management(user)
         elif choice == "0":
             break
 
@@ -263,7 +263,7 @@ def announcements(user):
     with conn.cursor() as cur:
         while True:
             clear()
-            print("=== Announcements ===")
+            print(Fore.BLUE + "=== Announcements ===")
             if user["role"] in ("MEMBER", "ADMIN"):
                 print("C. Create new announcement")
                 print("-" * 26)
@@ -291,7 +291,7 @@ def articles(user):
     with conn.cursor() as cur:
         while True:
             clear()
-            print("=== Articles ===")
+            print(Fore.BLUE + "=== Articles ===")
             if user["role"] == "ADMIN":
                 print("C. Create new article")
             else:
@@ -332,7 +332,7 @@ def events(user):
     with conn.cursor() as cur:
         while True:
             clear()
-            print("=== Events ===")
+            print(Fore.BLUE + "=== Events ===")
             if user["role"] == "ADMIN":
                 print("C. Create new event")
                 print("-" * 19)
@@ -361,10 +361,11 @@ def admin_panel(user):
     with conn.cursor() as cur:
         while True:
             clear()
-            print("=== Admin Panel ===")
+            print(Fore.BLUE + "=== Admin Panel ===")
             print("1. View users")
             print("2. Pending article requests")
             print("3. Event participants")
+            print("4. Comment Management")
             print("0. Back")
 
             choice = input("> ")
@@ -418,6 +419,8 @@ def admin_panel(user):
                     for r in rows:
                         print(f"{r['student_number']} - {r['name']}")
                     input("\nPress Enter...")
+            elif choice == "4":
+                comment_management(user)
 
 
 def main():
