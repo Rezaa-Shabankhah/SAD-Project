@@ -40,8 +40,8 @@ class Article(models.Model):
 
 class ArticleAuthors(models.Model):
     id = models.AutoField(primary_key=True)
-    article_id = models.IntegerField()
-    users_id = models.IntegerField()
+    article_id = models.ForeignKey(Article, db_column="article_id", on_delete=models. CASCADE)
+    users_id = models.ForeignKey(User, db_column="users_id", on_delete=models. CASCADE)
 
     class Meta:
         db_table = "article_authors"
