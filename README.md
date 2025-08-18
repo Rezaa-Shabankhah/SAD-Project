@@ -8,7 +8,7 @@
 
 دستورات زیر از دایرکتری اصلی فایل‌ها اجرا شود :
 ```
-pip install Django pymysql djangorestframework drf-yasg pymysql
+pip install Django pymysql djangorestframework drf-yasg pymysql colorama
 
 python3 -m venv venv
 source venv/bin/activate
