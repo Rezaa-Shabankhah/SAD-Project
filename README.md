@@ -6,14 +6,28 @@
 
 ### مراحل اجرا :
 
-دستورات زیر از دایرکتری اصلی فایل‌ها اجرا شود :
+ابتدا یک‌بار دستورات زیر را از دایرکتری اصلی فایل‌ها اجرا کنید :
 ```
-pip install Django pymysql djangorestframework drf-yasg pymysql colorama
-
+pip install Django mysqlclient djangorestframework drf-yasg pymysql colorama
 python3 -m venv venv
 source venv/bin/activate
-
 mysql -u root -p < university_association.sql
+python manage.py migrate
+python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','university_association_project.settings'); import django; django.setup(); from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@gmail.com','123')"
+```
+
+1. برای دسترسی به پنل ادمین، دستور زیر را اجرا کنید :
+```
+python manage.py runserver
+```
+
+  سپس به آدرس http://127.0.0.1:8000/admin/ رفته و مشخصات زیر را وارد کنید :
+> ID: admin
+
+> password: 123
+
+2. برای دسترسی به رابط کاربری، دستور زیر را از دایکتری اصلی فایل‌ها اجرا کنید :
+```
 python cli.py
 ```
 
