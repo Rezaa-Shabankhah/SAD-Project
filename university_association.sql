@@ -1,4 +1,5 @@
-CREATE DATABASE IF NOT EXISTS university_association;
+DROP DATABASE IF EXISTS university_association;
+CREATE DATABASE university_association;
 USE university_association;
 
 CREATE TABLE students (
