@@ -8,13 +8,18 @@
 
 ابتدا یک‌بار دستورات زیر را از دایرکتری اصلی فایل‌ها اجرا کنید :
 ```
-pip install Django mysqlclient djangorestframework drf-yasg pymysql colorama
-python3 -m venv venv
-source venv/bin/activate
+pip install Django djangorestframework drf-yasg pymysql colorama
+
 mysql -u root -p < university_association.sql
+
 python manage.py migrate
-python -c "import os; os.environ.setdefault('DJANGO_SETTINGS_MODULE','university_association_project.settings'); import django; django.setup(); from django.contrib.auth.models import User; User.objects.create_superuser('admin','admin@gmail.com','123')"
+
+python manage.py createsuperuser --username admin --email admin@example.com
 ```
+
+> در پسورد اول : رمز سرور root در MySQL خود را وارد کنید (در پروژه 12345 ست شده)
+> در پسورد دوم و سوم : رمز کاربر ادمین که 12345 ست شده
+
 
 1. برای دسترسی به پنل ادمین، دستور زیر را اجرا کنید :
 ```
@@ -24,16 +29,27 @@ python manage.py runserver
   سپس به آدرس http://127.0.0.1:8000/admin/ رفته و مشخصات زیر را وارد کنید :
 > ID: admin
 
-> password: 123
+> password: 12345
 
 2. برای دسترسی به رابط کاربری، دستور زیر را از دایکتری اصلی فایل‌ها اجرا کنید :
 ```
 python cli.py
 ```
+Role: Admin
+  StudentID: 1
+  Email: admin
+  Password : 0
 
-> توجه : پسورد دیتابیس در داخل کد 12345 ست شده است
 
+Role: Member
+  StudentID: 2
+  Email: member
+  Password : 0
 
+Role: Student
+  StudentID: 3, 4 or 5
+  Email: [new]
+  Password : [new]
 
 
 ## ساختار کلی پروژه
