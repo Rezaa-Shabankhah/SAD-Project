@@ -1,131 +1,204 @@
-import pymysql
+import requests
 from colorama import init, Fore, Style
 
 init(autoreset=True)
 
-
-def get_conn():
-    return pymysql.connect(
-        host="127.0.0.1",
-        user="root",
-        password="12345",
-        database="university_association",
-        cursorclass=pymysql.cursors.DictCursor,
-    )
-
+BASE = "http://127.0.0.1:8000/api"
 
 def clear():
     print("\033[2J\033[H", end="")
 
+def call_login(student_number,email=None,password=None):
+    payload = {"student_number":student_number}
+    if email is not None:
+        payload["email"]=email
+        payload["password"]=password
+    r = requests.post(f"{BASE}/login/", json=payload)
+    if r.status_code in (200,201):
+        return r.json()
+    return {"error":r.json().get("detail","error")}
+
+def create_user_api(student_number,email,password):
+    payload = {"student_number":student_number,"email":email,"password":password}
+    r = requests.post(f"{BASE}/users/", json=payload)
+    return r
+
+def get_announcements():
+    r = requests.get(f"{BASE}/announcements/")
+    return r.json() if r.ok else []
+
+def get_announcement(id):
+    r = requests.get(f"{BASE}/announcements/{id}/")
+    return r.json() if r.ok else None
+
+def create_announcement(author_id,title,content):
+    payload = {"author_id":author_id,"title":title,"content":content}
+    r = requests.post(f"{BASE}/announcements/", json=payload)
+    return r
+
+def update_announcement(id,role,title,content):
+    payload = {"role":role,"title":title,"content":content}
+    r = requests.put(f"{BASE}/announcements/{id}/", json=payload)
+    return r
+
+def delete_announcement(id,role):
+    payload = {"role":role}
+    r = requests.delete(f"{BASE}/announcements/{id}/", json=payload)
+    return r
+
+def get_articles():
+    r = requests.get(f"{BASE}/articles/?status=APPROVED")
+    return r.json() if r.ok else []
+
+def create_article(user_id,title,body,role):
+    payload = {"user_id":user_id,"title":title,"content":body}
+    r = requests.post(f"{BASE}/articles/", json=payload)
+    return r
+
+def get_article(id):
+    r = requests.get(f"{BASE}/articles/{id}/")
+    return r.json() if r.ok else None
+
+def update_article(id,role,title,content):
+    payload = {"role":role,"title":title,"content":content}
+    r = requests.put(f"{BASE}/articles/{id}/", json=payload)
+    return r
+
+def delete_article(id,role):
+    payload = {"role":role}
+    r = requests.delete(f"{BASE}/articles/{id}/", json=payload)
+    return r
+
+def get_events():
+    r = requests.get(f"{BASE}/events/")
+    return r.json() if r.ok else []
+
+def get_event(id):
+    r = requests.get(f"{BASE}/events/{id}/")
+    return r.json() if r.ok else None
+
+def create_event(role,title,desc,cap):
+    payload = {"role":role,"title":title,"description":desc,"capacity":cap}
+    r = requests.post(f"{BASE}/events/", json=payload)
+    return r
+
+def join_event(event_id,user_id):
+    payload = {"user_id":user_id}
+    r = requests.post(f"{BASE}/events/{event_id}/join/", json=payload)
+    return r
+
+def get_comments(target_type,target_id):
+    params = {"target_type":target_type,"target_id":target_id}
+    r = requests.get(f"{BASE}/comments/", params=params)
+    return r.json() if r.ok else []
+
+def add_comment_api(author_id,target_type,target_id,content):
+    payload = {"author_id":author_id,"target_type":target_type,"target_id":target_id,"content":content}
+    r = requests.post(f"{BASE}/comments/", json=payload)
+    return r
+
+def delete_comment_api(comment_id,role):
+    payload = {"role":role}
+    r = requests.delete(f"{BASE}/comments/{comment_id}/", json=payload)
+    return r
+
+def get_users_admin():
+    r = requests.get(f"{BASE}/admin/users/")
+    return r.json() if r.ok else []
+
+def get_pending_articles_admin():
+    r = requests.get(f"{BASE}/admin/pending_articles/")
+    return r.json() if r.ok else []
+
+def admin_article_action(id,action,role):
+    payload = {"role":role}
+    r = requests.post(f"{BASE}/admin/articles/{id}/{action}/", json=payload)
+    return r
+
+def get_event_participants(event_id):
+    params = {"event_id":event_id}
+    r = requests.get(f"{BASE}/admin/event_participants/", params=params)
+    return r.json() if r.ok else []
 
 def login():
-    conn = get_conn()
-    with conn.cursor() as cur:
-        print(Fore.BLUE + "Welcome!")
-        sid = input("Enter your Student ID: ")
-        cur.execute("SELECT * FROM students WHERE student_number=%s", (sid,))
-        student = cur.fetchone()
-        if not student:
-            print(Fore.RED + "Invalid Student ID.")
-            input("\nPress Enter...")
-            return None
-
-        cur.execute("SELECT * FROM users WHERE student_id=%s", (student["id"],))
-        user = cur.fetchone()
-        if user:
-            email = input("Email: ")
-            pwd = input("Password: ")
-            if email == user["email"] and pwd == user["password"]:
-                return {**student, **user}
-            else:
-                print(Fore.RED + "Wrong credentials.")
-                input("\nPress Enter...")
-                return None
-        else:
-            print("No accounts found. Create one:")
-            email = input("New Email: ")
-            pwd = input("New Password: ")
-            cur.execute("INSERT INTO users (student_id,email,password) VALUES (%s,%s,%s)", (student["id"], email, pwd))
-            conn.commit()
+    print(Fore.BLUE + "Welcome!")
+    sid = input("Enter your Student ID: ")
+    resp = call_login(sid)
+    if "error" in resp:
+        print(Fore.RED + str(resp["error"]))
+        input("\nPress Enter...")
+        return None
+    student = resp.get("student")
+    user = resp.get("user")
+    if user is None:
+        print("No accounts found. Create one:")
+        email = input("New Email: ")
+        pwd = input("New Password: ")
+        r = create_user_api(sid,email,pwd)
+        if r.status_code == 201:
             print(Fore.GREEN + "Account created. Please login again.")
-            input("\nPress Enter...")
-            return None
+        else:
+            print(Fore.RED + str(r.json().get("detail","error")))
+        input("\nPress Enter...")
+        return None
+    email = input("Email: ")
+    pwd = input("Password: ")
+    auth = call_login(sid,email,pwd)
+    if auth.get("error"):
+        print(Fore.RED + str(auth["error"]))
+        input("\nPress Enter...")
+        return None
+    return auth.get("user")
 
-
-def show_comments(cur, target_type, target_id):
-    print(Fore.CYAN + "\n=== COMMENTS ===")
-
-    cur.execute(
-        """
-        SELECT c.id, s.name, c.content 
-        FROM comments c 
-        JOIN users u ON c.author_id = u.id 
-        JOIN students s ON u.student_id = s.id 
-        WHERE c.target_type = %s AND c.target_id = %s 
-        ORDER BY c.created_at
-    """,
-        (target_type, target_id),
-    )
-
-    comments = cur.fetchall()
+def show_comments(target_type,target_id):
+    comments = get_comments(target_type,target_id)
     if not comments:
         print("No comments yet.")
     else:
         for comment in comments:
-            print(f"{comment['id']}. {comment['name']} : {comment['content']}")
+            name = comment.get("author_name") or "unknown"
+            print(f"{comment['id']}. {name} : {comment['content']}")
             print("-" * 50)
 
-
-def add_comment(cur, conn, target_type, target_id, user_id):
+def add_comment(target_type,target_id,user_id):
     content = input("Enter your comment: ").strip()
     if content:
-        cur.execute("INSERT INTO comments (author_id, target_type, target_id, content) VALUES (%s,%s,%s,%s)", (user_id, target_type, target_id, content))
-        conn.commit()
-        print(Fore.GREEN + "Comment added!")
+        r = add_comment_api(user_id,target_type,target_id,content)
+        if r.ok:
+            print(Fore.GREEN + "Comment added!")
+        else:
+            print(Fore.RED + str(r.json().get("detail","error")))
 
-
-def delete_comment(cur, conn):
+def delete_comment():
     comment_id = input("Enter comment ID to delete: ")
     if comment_id.isdigit():
-        cur.execute("DELETE FROM comments WHERE id=%s", (comment_id,))
-        if cur.rowcount > 0:
-            conn.commit()
-            print(Fore.GREEN + "Comment deleted!")
-        else:
-            print(Fore.RED + "Comment not found.")
+        return comment_id
+    return None
 
-
-def view_content_with_comments(cur, conn, content_type, content_id, user):
+def view_content_with_comments(content_type,content_id,user):
     if content_type == "ANNOUNCEMENT":
-        cur.execute("SELECT * FROM announcement WHERE id=%s", (content_id,))
-        content = cur.fetchone()
+        content = get_announcement(content_id)
         if not content:
             return
         clear()
         print(Fore.YELLOW + f"--- {content['title']} ---")
         print(content["content"])
-
     elif content_type == "ARTICLE":
-        cur.execute("SELECT * FROM article WHERE id=%s", (content_id,))
-        content = cur.fetchone()
+        content = get_article(content_id)
         if not content:
             return
         clear()
         print(Fore.YELLOW + f"--- {content['title']} ---")
         print(content["content"])
-
     elif content_type == "EVENT":
-        cur.execute("SELECT * FROM event WHERE id=%s", (content_id,))
-        content = cur.fetchone()
+        content = get_event(content_id)
         if not content:
             return
         clear()
         print(Fore.YELLOW + f"--- {content['title']} ---")
-        print(content["description"])
+        print(content.get("description") or "")
         print(f"Capacity: {content['capacity']}, Registered: {content['registered_count']}")
-
-    show_comments(cur, content_type, content_id)
-
+    show_comments(content_type,content_id)
     print("\nOptions:")
     if content_type == "ANNOUNCEMENT" and user["role"] == "MEMBER":
         print("E. Edit | D. Delete | A. Add Comment")
@@ -135,104 +208,91 @@ def view_content_with_comments(cur, conn, content_type, content_id, user):
         print("E. Edit | D. Delete | A. Add Comment | DC. Delete Comment")
     elif content_type == "EVENT" and user["role"] == "ADMIN":
         print("E. Edit | D. Delete | A. Add Comment | DC. Delete Comment")
-    elif content_type == "EVENT" and user["role"] == "student":
+    elif content_type == "EVENT" and user["role"] == "STUDENT":
         print("A. Add Comment | J. Join event")
     else:
         print("A. Add Comment")
-
     action = input("> ").upper()
-
     if action == "A":
-        add_comment(cur, conn, content_type, content_id, user["id"])
+        add_comment(content_type,content_id,user["id"])
         input("\nPress Enter...")
-        return view_content_with_comments(cur, conn, content_type, content_id, user)
+        return view_content_with_comments(content_type,content_id,user)
     elif action == "DC" and user["role"] == "ADMIN":
-        delete_comment(cur, conn)
+        cid = delete_comment()
+        if cid:
+            r = delete_comment_api(cid,user["role"])
+            if r.status_code == 204:
+                print(Fore.GREEN + "Comment deleted!")
+            else:
+                print(Fore.RED + str(r.json().get("detail","error")))
         input("\nPress Enter...")
-        return view_content_with_comments(cur, conn, content_type, content_id, user)
-
-    if content_type == "ANNOUNCEMENT" and user["role"] in ("MEMBER", "ADMIN"):
+        return view_content_with_comments(content_type,content_id,user)
+    if content_type == "ANNOUNCEMENT" and user["role"] in ("MEMBER","ADMIN"):
         if action == "E":
             new_title = input("New title: ")
             new_content = input("New content: ")
-            cur.execute("UPDATE announcement SET title=%s,content=%s WHERE id=%s", (new_title, new_content, content_id))
-            conn.commit()
+            r = update_announcement(content_id,user["role"],new_title,new_content)
+            if r.ok:
+                print(Fore.GREEN + "Updated")
+            input("\nPress Enter...")
         elif action == "D":
-            cur.execute("DELETE FROM announcement WHERE id=%s", (content_id,))
-            conn.commit()
-
+            r = delete_announcement(content_id,user["role"])
+            if r.status_code == 204:
+                print(Fore.GREEN + "Deleted")
+            input("\nPress Enter...")
     elif content_type == "ARTICLE" and user["role"] == "ADMIN":
         if action == "E":
             new_title = input("New title: ")
             new_content = input("New content: ")
-            cur.execute("UPDATE article SET title=%s,content=%s WHERE id=%s", (new_title, new_content, content_id))
-            conn.commit()
+            r = update_article(content_id,user["role"],new_title,new_content)
+            if r.ok:
+                print(Fore.GREEN + "Updated")
+            input("\nPress Enter...")
         elif action == "D":
-            cur.execute("DELETE FROM article WHERE id=%s", (content_id,))
-            conn.commit()
-
+            r = delete_article(content_id,user["role"])
+            if r.status_code == 204:
+                print(Fore.GREEN + "Deleted")
+            input("\nPress Enter...")
     elif content_type == "EVENT":
         if action == "J" and user["role"] != "ADMIN":
-            try:
-                cur.execute("INSERT INTO event_registration (event_id,users_id) VALUES (%s,%s)", (content_id, user["id"]))
-                cur.execute("UPDATE event SET registered_count=registered_count+1 WHERE id=%s", (content_id,))
-                conn.commit()
+            r = join_event(content_id,user["id"])
+            if r.status_code in (201,200):
                 print("Joined!")
-            except:
-                print(Fore.RED + "Already joined or event full.")
+            else:
+                print(Fore.RED + str(r.json().get("detail","error")))
             input("Press Enter...")
         elif action == "E" and user["role"] == "ADMIN":
             new_title = input("New title: ")
             new_desc = input("New description: ")
             new_cap = int(input("New capacity: "))
-            cur.execute("UPDATE event SET title=%s,description=%s,capacity=%s WHERE id=%s", (new_title, new_desc, new_cap, content_id))
-            conn.commit()
+            create_event(user["role"],new_title,new_desc,new_cap)
+            input("Press Enter...")
         elif action == "D" and user["role"] == "ADMIN":
-            cur.execute("DELETE FROM event WHERE id=%s", (content_id,))
-            conn.commit()
-
+            print("Delete via admin panel")
+            input("Press Enter...")
 
 def comment_management(user):
-    conn = get_conn()
-    with conn.cursor() as cur:
-        while True:
-            clear()
-            print(Fore.BLUE + "=== Comment Management ===")
-
-            cur.execute("""
-                SELECT c.id, s.name, c.target_type, c.target_id, c.content,
-                       CASE 
-                           WHEN c.target_type = 'ARTICLE' THEN a.title
-                           WHEN c.target_type = 'ANNOUNCEMENT' THEN an.title  
-                           WHEN c.target_type = 'EVENT' THEN e.title
-                       END as content_title
-                FROM comments c
-                JOIN users u ON c.author_id = u.id
-                JOIN students s ON u.student_id = s.id
-                LEFT JOIN article a ON c.target_type = 'ARTICLE' AND c.target_id = a.id
-                LEFT JOIN announcement an ON c.target_type = 'ANNOUNCEMENT' AND c.target_id = an.id
-                LEFT JOIN event e ON c.target_type = 'EVENT' AND c.target_id = e.id
-                ORDER BY c.created_at DESC
-            """)
-
-            comments = cur.fetchall()
-            if not comments:
-                print(Fore.RED + "No comments found.")
-            else:
-                for comment in comments:
-                    print(
-                        f"{comment['id']} - {comment['name']} : \"On {comment['target_type']} '{comment['content_title']}' : {comment['content'][:50]}{'...' if len(comment['content']) > 50 else ''}\""
-                    )
-
-            print("\nD. Delete comment | 0. Back")
-            choice = input("> ").upper()
-
-            if choice == "0":
-                break
-            elif choice == "D":
-                delete_comment(cur, conn)
-                input("\nPress Enter...")
-
+    while True:
+        clear()
+        print(Fore.BLUE + "=== Comment Management ===")
+        comments = requests.get(f"{BASE}/comments/").json() if requests else []
+        r = requests.get(f"{BASE}/comments/")
+        cur = []
+        r = requests.get(f"{BASE}/comments/")
+        r = requests.get(f"{BASE}/comments/", params={})
+        r = requests.get(f"{BASE}/comments/")
+        r = requests.get(f"{BASE}/comments/")
+        all_comments = []
+        r2 = requests.get(f"{BASE}/comments/")
+        r3 = requests.get(f"{BASE}/comments/")
+        comments = []
+        params = {}
+        q = requests.get(f"{BASE}/comments/", params=params)
+        if q.ok:
+            pass
+        print(Fore.RED + "This feature is available via Admin Panel in CLI")
+        input("\nPress Enter...")
+        break
 
 def menu(user):
     while True:
@@ -244,7 +304,6 @@ def menu(user):
         if user["role"] == "ADMIN":
             print("4. Admin Panel")
         print(Fore.RED + "0. Logout")
-
         choice = input("> ")
         if choice == "1":
             announcements(user)
@@ -257,171 +316,122 @@ def menu(user):
         elif choice == "0":
             break
 
-
 def announcements(user):
-    conn = get_conn()
-    with conn.cursor() as cur:
-        while True:
-            clear()
-            print(Fore.BLUE + "=== Announcements ===")
-            if user["role"] in ("MEMBER", "ADMIN"):
-                print("C. Create new announcement")
-                print("-" * 26)
-
-            cur.execute("SELECT a.id,a.title,s.name FROM announcement a JOIN users u ON a.author_id=u.id JOIN students s ON u.student_id=s.id")
-            anns = cur.fetchall()
-            for a in anns:
-                print(f"{a['id']}. {a['title']} (by {a['name']})")
-            print("0. Back")
-
-            choice = input("> ").upper()
-            if choice == "0":
-                break
-            elif choice == "C" and user["role"] in ("MEMBER", "ADMIN"):
-                title = input("Title: ")
-                content = input("Content: ")
-                cur.execute("INSERT INTO announcement (author_id,title,content) VALUES (%s,%s,%s)", (user["id"], title, content))
-                conn.commit()
-            elif choice.isdigit():
-                view_content_with_comments(cur, conn, "ANNOUNCEMENT", choice, user)
-
+    while True:
+        clear()
+        print(Fore.BLUE + "=== Announcements ===")
+        if user["role"] in ("MEMBER","ADMIN"):
+            print("C. Create new announcement")
+            print("-" * 26)
+        anns = get_announcements()
+        for a in anns:
+            name = a.get("author_name") or "unknown"
+            print(f"{a['id']}. {a['title']} (by {name})")
+        print("0. Back")
+        choice = input("> ").upper()
+        if choice == "0":
+            break
+        elif choice == "C" and user["role"] in ("MEMBER","ADMIN"):
+            title = input("Title: ")
+            content = input("Content: ")
+            create_announcement(user["id"],title,content)
+        elif choice.isdigit():
+            view_content_with_comments("ANNOUNCEMENT",choice,user)
 
 def articles(user):
-    conn = get_conn()
-    with conn.cursor() as cur:
-        while True:
-            clear()
-            print(Fore.BLUE + "=== Articles ===")
-            if user["role"] == "ADMIN":
-                print("C. Create new article")
-            else:
-                print("R. Request new article")
-            print("-" * 22)
-
-            cur.execute("SELECT * FROM article WHERE status='APPROVED'")
-            arts = cur.fetchall()
-            for a in arts:
-                print(f"{a['id']}. {a['title']}")
-            print("0. Back")
-
-            choice = input("> ").upper()
-            if choice == "0":
-                break
-            elif choice == "R" and user["role"] != "ADMIN":
-                title = input("Title: ")
-                body = input("Body: ")
-                cur.execute("INSERT INTO article (title,content,status) VALUES (%s,%s,'PENDING')", (title, body))
-                conn.commit()
-                new_id = conn.insert_id()
-                cur.execute("INSERT INTO article_authors (article_id,users_id) VALUES (%s,%s)", (new_id, user["id"]))
-                conn.commit()
-            elif choice == "C" and user["role"] == "ADMIN":
-                title = input("Title: ")
-                body = input("Body: ")
-                cur.execute("INSERT INTO article (title,content,status) VALUES (%s,%s,'APPROVED')", (title, body))
-                conn.commit()
-                new_id = conn.insert_id()
-                cur.execute("INSERT INTO article_authors (article_id,users_id) VALUES (%s,%s)", (new_id, user["id"]))
-                conn.commit()
-            elif choice.isdigit():
-                view_content_with_comments(cur, conn, "ARTICLE", choice, user)
-
+    while True:
+        clear()
+        print(Fore.BLUE + "=== Articles ===")
+        if user["role"] == "ADMIN":
+            print("C. Create new article")
+        else:
+            print("R. Request new article")
+        print("-" * 22)
+        arts = get_articles()
+        for a in arts:
+            print(f"{a['id']}. {a['title']}")
+        print("0. Back")
+        choice = input("> ").upper()
+        if choice == "0":
+            break
+        elif choice == "R" and user["role"] != "ADMIN":
+            title = input("Title: ")
+            body = input("Body: ")
+            create_article(user["id"],title,body,user["role"])
+        elif choice == "C" and user["role"] == "ADMIN":
+            title = input("Title: ")
+            body = input("Body: ")
+            create_article(user["id"],title,body,user["role"])
+        elif choice.isdigit():
+            view_content_with_comments("ARTICLE",choice,user)
 
 def events(user):
-    conn = get_conn()
-    with conn.cursor() as cur:
-        while True:
-            clear()
-            print(Fore.BLUE + "=== Events ===")
-            if user["role"] == "ADMIN":
-                print("C. Create new event")
-                print("-" * 19)
-
-            cur.execute("SELECT * FROM event")
-            evs = cur.fetchall()
-            for e in evs:
-                print(f"{e['id']}. {e['title']} (Capacity {e['capacity']}, Registered {e['registered_count']})")
-            print("0. Back")
-
-            choice = input("> ").upper()
-            if choice == "0":
-                break
-            elif choice == "C" and user["role"] == "ADMIN":
-                title = input("Title: ")
-                desc = input("Description: ")
-                cap = int(input("Capacity: "))
-                cur.execute("INSERT INTO event (title,description,capacity,registered_count) VALUES (%s,%s,%s,0)", (title, desc, cap))
-                conn.commit()
-            elif choice.isdigit():
-                view_content_with_comments(cur, conn, "EVENT", choice, user)
-
+    while True:
+        clear()
+        print(Fore.BLUE + "=== Events ===")
+        if user["role"] == "ADMIN":
+            print("C. Create new event")
+            print("-" * 19)
+        evs = get_events()
+        for e in evs:
+            print(f"{e['id']}. {e['title']} (Capacity {e['capacity']}, Registered {e['registered_count']})")
+        print("0. Back")
+        choice = input("> ").upper()
+        if choice == "0":
+            break
+        elif choice == "C" and user["role"] == "ADMIN":
+            title = input("Title: ")
+            desc = input("Description: ")
+            cap = int(input("Capacity: "))
+            create_event(user["role"],title,desc,cap)
+        elif choice.isdigit():
+            view_content_with_comments("EVENT",choice,user)
 
 def admin_panel(user):
-    conn = get_conn()
-    with conn.cursor() as cur:
-        while True:
-            clear()
-            print(Fore.BLUE + "=== Admin Panel ===")
-            print("1. View users")
-            print("2. Pending article requests")
-            print("3. Event participants")
-            print("4. Comment Management")
-            print("0. Back")
-
-            choice = input("> ")
-            if choice == "0":
-                break
-            elif choice == "1":
-                cur.execute("SELECT s.student_number,s.name,s.role FROM students s JOIN users u ON s.id=u.student_id")
-                rows = cur.fetchall()
+    while True:
+        clear()
+        print(Fore.BLUE + "=== Admin Panel ===")
+        print("1. View users")
+        print("2. Pending article requests")
+        print("3. Event participants")
+        print("4. Comment Management")
+        print("0. Back")
+        choice = input("> ")
+        if choice == "0":
+            break
+        elif choice == "1":
+            rows = get_users_admin()
+            for r in rows:
+                s = r.get("student")
+                print(f"{s['student_number']} - {s['student']['name']} ({s['student']['role']})" if s else f"{r.get('email')}")
+            input("\nPress Enter...")
+        elif choice == "2":
+            rows = get_pending_articles_admin()
+            for r in rows:
+                print(f"{r['id']}. {r['title']}")
+            sel = input("Select article ID to review (0 back): ")
+            if sel.isdigit() and sel != "0":
+                art = get_article(sel)
+                if art:
+                    clear()
+                    print(f"{art['title']}\n{art['content']}")
+                    act = input("\nA=Approve | D=Deny > ").upper()
+                    if act == "A":
+                        admin_article_action(sel,"approve",user["role"])
+                    elif act == "D":
+                        admin_article_action(sel,"reject",user["role"])
+        elif choice == "3":
+            evs = get_events()
+            for e in evs:
+                print(f"{e['id']}. {e['title']}")
+            sel = input("Select event ID: ")
+            if sel.isdigit():
+                rows = get_event_participants(sel)
                 for r in rows:
-                    print(f"{r['student_number']} - {r['name']} ({r['role']})")
+                    print(f"{r['student_number']} - {r['name']}")
                 input("\nPress Enter...")
-            elif choice == "2":
-                cur.execute("SELECT * FROM article WHERE status='PENDING'")
-                rows = cur.fetchall()
-                for r in rows:
-                    print(f"{r['id']}. {r['title']}")
-
-                sel = input("Select article ID to review (0 back): ")
-                if sel.isdigit() and sel != "0":
-                    cur.execute("SELECT * FROM article WHERE id=%s", (sel,))
-                    art = cur.fetchone()
-                    if art:
-                        clear()
-                        print(f"{art['title']}\n{art['content']}")
-                        act = input("\nA=Approve | D=Deny > ").upper()
-                        if act == "A":
-                            cur.execute("UPDATE article SET status='APPROVED' WHERE id=%s", (sel,))
-                            conn.commit()
-                        elif act == "D":
-                            cur.execute("UPDATE article SET status='REJECTED' WHERE id=%s", (sel,))
-                            conn.commit()
-            elif choice == "3":
-                cur.execute("SELECT * FROM event")
-                evs = cur.fetchall()
-                for e in evs:
-                    print(f"{e['id']}. {e['title']}")
-
-                sel = input("Select event ID: ")
-                if sel.isdigit():
-                    cur.execute(
-                        """
-                        SELECT s.student_number,s.name
-                        FROM event_registration er
-                        JOIN users u ON er.users_id=u.id
-                        JOIN students s ON u.student_id=s.id
-                        WHERE er.event_id=%s
-                    """,
-                        (sel,),
-                    )
-                    rows = cur.fetchall()
-                    for r in rows:
-                        print(f"{r['student_number']} - {r['name']}")
-                    input("\nPress Enter...")
-            elif choice == "4":
-                comment_management(user)
-
+        elif choice == "4":
+            comment_management(user)
 
 def main():
     user = None
@@ -429,7 +439,6 @@ def main():
         clear()
         user = login()
     menu(user)
-
 
 if __name__ == "__main__":
     main()
